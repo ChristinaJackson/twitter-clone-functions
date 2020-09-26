@@ -4,7 +4,8 @@ const firebaseConfig = require('../util/firebaseConfig')
 const firebase = require('firebase');
 firebase.initializeApp(firebaseConfig)
 
-const { validateSignupData, validateLoginData, reduceUserDetails } = require("../util/validators")
+const { validateSignupData, validateLoginData, reduceUserDetails } = require("../util/validators");
+const { user } = require("firebase-functions/lib/providers/auth");
 
 //new user sign up
 exports.signup = (req, res) => {
@@ -99,6 +100,29 @@ exports.addUserDetails = (req, res) => {
             return res.status(500).json({ error: err.code });
         });
 };
+//get own user details
+exports.getAuthenticatedUser = (req, res) => {
+    let userData = {};
+
+    db.doc(`/users/${req.user.handle}`).get()
+        .then(doc => {
+            if (doc.exists) {
+                userData.credentials = doc.data();
+                return db.collection('likes').where('userHandle', "==", req.user.handle).get();
+            }
+        })
+        .then(data => {
+            userData.likes = []
+            data.forEach(doc => {
+                userData.likes.push(doc.data());
+            })
+            return res.json(userData)
+        })
+        .catch((err) => {
+            console.error(err);
+            return res.status(500).json({ error: err.code });
+        });
+}
 
 //upload a profile image for user
 exports.uploadImage = (req, res) => {
